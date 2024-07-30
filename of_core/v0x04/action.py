@@ -5,8 +5,12 @@ from napps.kytos.of_core.v0x04.flow import ActionSetVlan
 from pyof.v0x04.common.action import ActionSetField as OFActionSetField
 
 from pyof.foundation.basic_types import HWAddress, IPAddress
-from pyof.v0x04.common.flow_match import (OxmMatchFields, OxmOfbMatchField,
-                                          OxmTLV, VlanId)
+from pyof.v0x04.common.flow_match import (
+    OxmMatchFields,
+    OxmOfbMatchField,
+    OxmTLV,
+    VlanId,
+)
 
 
 class ActionSetIPv4Dst(ActionBase):
@@ -29,9 +33,9 @@ class ActionSetIPv4Dst(ActionBase):
         """Return a pyof ActionSetIPv4Dst instance."""
         ip_addr = IPAddress(self.ipv4_dst)
         tlv = OxmTLV(
-            oxm_field = OxmOfbMatchField.OFPXMT_OFB_IPV4_DST,
+            oxm_field=OxmOfbMatchField.OFPXMT_OFB_IPV4_DST,
             oxm_hasmask=False,
-            oxm_value= ip_addr.pack()
+            oxm_value=ip_addr.pack(),
         )
         return OFActionSetField(field=tlv)
 
