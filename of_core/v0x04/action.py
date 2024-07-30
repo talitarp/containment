@@ -2,7 +2,7 @@
 
 from napps.kytos.of_core.flow import ActionBase
 from napps.kytos.of_core.v0x04.flow import ActionSetVlan
-from pyof.foundation.basic_types import HWAddress, IPAddress
+from pyof.foundation.basic_types import HWAddress, IPAddress, IPv6Address
 from pyof.v0x04.common.action import ActionSetField as OFActionSetField
 from pyof.v0x04.common.flow_match import (
     OxmMatchFields,
@@ -40,19 +40,97 @@ class ActionSetIPv4Dst(ActionBase):
 
 
 class ActionSetIPv6Dst(ActionBase):
-    pass
+    """Action to set IPv6 destination."""
+
+    def __init__(self, ipv6_dst):
+        self.ipv6_dst = ipv6_dst
+        self.action_type = "set_ipv6_dst"
+
+    @classmethod
+    def from_of_action(cls, of_action):
+        """Return a high-level ActionSetIPv4Dst instance from pyof."""
+        ip_address = IPv6Address()
+        ip_address.unpack(of_action.field.oxm_value)
+        return cls(
+            ipv6_dst=str(ip_address),
+        )
+
+    def as_of_action(self):
+        """Return a pyof ActionSetIPv4Dst instance."""
+        ip_addr = IPv6Address(self.ipv6_dst)
+        tlv = OxmTLV(
+            oxm_field=OxmOfbMatchField.OFPXMT_OFB_IPV6_DST,
+            oxm_hasmask=False,
+            oxm_value=ip_addr.pack(),
+        )
+        return OFActionSetField(field=tlv)
 
 
 class ActionSetTCPDst(ActionBase):
-    pass
+    """Action to set TCP dst port."""
+
+    def __init__(self, port):
+        self.port = port
+        self.action_type = "set_tcp_dst"
+
+    @classmethod
+    def from_of_action(cls, of_action):
+        """Return a high-level instance from pyof."""
+        port = int.from_bytes(of_action.field.oxm_value, 'big')
+        return cls(port)
+
+    def as_of_action(self):
+        """Return a pyof ActionSetIPv4Dst instance."""
+        tlv = OxmTLV(
+            oxm_field=OxmOfbMatchField.OFPXMT_OFB_TCP_DST,
+            oxm_value=self.port.to_bytes(2, 'big'),
+        )
+        return OFActionSetField(field=tlv)
 
 
 class ActionSetUDPDst(ActionBase):
-    pass
+    """Action to set UDP dst port."""
+
+    def __init__(self, port):
+        self.port = port
+        self.action_type = "set_udp_dst"
+
+    @classmethod
+    def from_of_action(cls, of_action):
+        """Return a high-level instance from pyof."""
+        port = int.from_bytes(of_action.field.oxm_value, 'big')
+        return cls(port)
+
+    def as_of_action(self):
+        """Return a pyof instance."""
+        tlv = OxmTLV(
+            oxm_field=OxmOfbMatchField.OFPXMT_OFB_UDP_DST,
+            oxm_value=self.port.to_bytes(2, 'big'),
+        )
+        return OFActionSetField(field=tlv)
 
 
 class ActionSetETHDst(ActionBase):
-    pass
+    """Action to set Ethernet dst addr."""
+
+    def __init__(self, eth_addr):
+        self.eth_addr = eth_addr
+        self.action_type = "set_eth_dst"
+
+    @classmethod
+    def from_of_action(cls, of_action):
+        """Return a high-level instance from pyof."""
+        eth_addr = HWAddress()
+        eth_addr.unpack(of_action.field.oxm_value)
+        return cls(str(eth_addr))
+
+    def as_of_action(self):
+        """Return a pyof instance."""
+        tlv = OxmTLV(
+            oxm_field=OxmOfbMatchField.OFPXMT_OFB_ETH_DST,
+            oxm_value=HWAddress(self.eth_addr).pack()
+        )
+        return OFActionSetField(field=tlv)
 
 
 class ActionSetFieldFactory(OFActionSetField):
