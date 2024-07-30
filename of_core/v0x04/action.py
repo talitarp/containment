@@ -2,9 +2,8 @@
 
 from napps.kytos.of_core.flow import ActionBase
 from napps.kytos.of_core.v0x04.flow import ActionSetVlan
-from pyof.v0x04.common.action import ActionSetField as OFActionSetField
-
 from pyof.foundation.basic_types import HWAddress, IPAddress
+from pyof.v0x04.common.action import ActionSetField as OFActionSetField
 from pyof.v0x04.common.flow_match import (
     OxmMatchFields,
     OxmOfbMatchField,

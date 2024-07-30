@@ -1,28 +1,26 @@
 """Main module of talitarp/contention Kytos Network Application."""
 
-import requests
 import json
-from pyof.v0x04.common.action import ActionOutput as OFActionOutput
-from pyof.v0x04.common.action import ActionSetField as OFActionSetField
-from pyof.v0x01.common.phy_port import Port
-from napps.kytos.of_core.v0x04.flow import Action
 from uuid import uuid4
-from kytos.core import KytosNApp, log, rest
-from kytos.core import KytosEvent
+
+import requests
+from kytos.core import KytosEvent, KytosNApp, log, rest
 from kytos.core.helpers import listen_to
 from kytos.core.rest_api import HTTPException, JSONResponse, Request, get_json_or_400
-
+from napps.kytos.of_core.v0x04.flow import Action
 from napps.talitarp.contention.of_core.v0x04.action import (
+    ActionSetETHDst,
     ActionSetFieldFactory,
     ActionSetIPv4Dst,
     ActionSetIPv6Dst,
     ActionSetTCPDst,
     ActionSetUDPDst,
-    ActionSetETHDst,
 )
-from .settings import (
-    COOKIE_PREFIX,
-)
+from pyof.v0x01.common.phy_port import Port
+from pyof.v0x04.common.action import ActionOutput as OFActionOutput
+from pyof.v0x04.common.action import ActionSetField as OFActionSetField
+
+from .settings import COOKIE_PREFIX
 
 
 class Main(KytosNApp):
