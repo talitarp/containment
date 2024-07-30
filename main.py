@@ -2,6 +2,7 @@
 import requests
 import json
 from pyof.v0x04.common.action import ActionOutput as OFActionOutput
+from pyof.v0x04.common.action import ActionSetField as OFActionSetField
 from pyof.v0x01.common.phy_port import Port
 from napps.kytos.of_core.v0x04.flow import Action
 from uuid import uuid4
@@ -10,6 +11,15 @@ from kytos.core import KytosEvent
 from kytos.core.helpers import listen_to
 from kytos.core.rest_api import (HTTPException, JSONResponse, Request,
                                  get_json_or_400)
+
+from napps.talitarp.contention.of_core.v0x04.action import (
+    ActionSetFieldFactory,
+    ActionSetIPv4Dst,
+    ActionSetIPv6Dst,
+    ActionSetTCPDst,
+    ActionSetUDPDst,
+    ActionSetETHDst,
+)
 from .settings import (
     COOKIE_PREFIX,
 )
@@ -41,15 +51,15 @@ class Main(KytosNApp):
         self.list_blocks = []
 
         # for new actions
-        """
         self.new_actions = {
-            "set_ipv4_dst": ipv4_dst,
-            "set_ipv6_dst": ipv6_dst,
-            "set_tcp_dst": tcp_dst,
-            "set_udp_dst": udp_dst,
-            "set_mac_dst": mac_dst
+            "set_ipv4_dst": ActionSetIPv4Dst,
+            "set_ipv6_dst": ActionSetIPv6Dst,
+            "set_tcp_dst": ActionSetTCPDst,
+            "set_udp_dst": ActionSetUDPDst,
+            "set_eth_dst": ActionSetETHDst,
+            OFActionSetField: ActionSetFieldFactory,  # overwrite of_core definition
         }
-        """
+
     def execute(self):
         """This method is executed right after the setup method execution.
 
@@ -60,6 +70,7 @@ class Main(KytosNApp):
 
             It is not necessary in this NApp.
         """
+        self.register_new_actions()
 
     def shutdown(self):
         """This method is executed when your napp is unloaded.
@@ -70,7 +81,7 @@ class Main(KytosNApp):
             It is not necessary in this NApp.
         """
 
-    def register_new_actions (self):
+    def register_new_actions(self):
         """Add new actions to kytos/of_core."""
         for name, action in self.new_actions.items():
             Action.add_action_class(name, action)
