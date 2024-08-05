@@ -3,6 +3,7 @@
 Run "python3 setup.py --help-commands" to list all available commands and their
 descriptions.
 """
+import json
 import os
 import shutil
 import sys
@@ -12,29 +13,27 @@ from subprocess import CalledProcessError, call, check_call
 
 from setuptools import Command, setup
 from setuptools.command.develop import develop
-from setuptools.command.egg_info import egg_info
 from setuptools.command.install import install
 
-if 'bdist_wheel' in sys.argv:
+if "bdist_wheel" in sys.argv:
     raise RuntimeError("This setup.py does not support wheels")
 
 # Paths setup with virtualenv detection
-BASE_ENV = Path(os.environ.get('VIRTUAL_ENV', '/'))
+BASE_ENV = Path(os.environ.get("VIRTUAL_ENV", "/"))
 
-NAPP_NAME = 'contention'
-NAPP_USERNAME = 'talitarp'
-NAPP_VERSION = '1.0.0'
+NAPP_NAME = 'containment'
+NAPP_USERNAME = 'hackinsdn'
 
 # Kytos var folder
-VAR_PATH = BASE_ENV / 'var' / 'lib' / 'kytos'
+VAR_PATH = BASE_ENV / "var" / "lib" / "kytos"
 # Path for enabled NApps
-ENABLED_PATH = VAR_PATH / 'napps'
+ENABLED_PATH = VAR_PATH / "napps"
 # Path to install NApps
-INSTALLED_PATH = VAR_PATH / 'napps' / '.installed'
-CURRENT_DIR = Path('.').resolve()
+INSTALLED_PATH = VAR_PATH / "napps" / ".installed"
+CURRENT_DIR = Path(".").resolve()
 
 # NApps enabled by default
-CORE_NAPPS = ['of_core', 'topology']
+CORE_NAPPS = ['of_core', 'flow_manager']
 
 
 class SimpleCommand(Command):
@@ -61,75 +60,59 @@ class TestCommand(Command):
     """Test tags decorators."""
 
     user_options = [
-        ('size=', None, 'Specify the size of tests to be executed.'),
-        ('type=', None, 'Specify the type of tests to be executed.'),
+        ("k=", None, "Specify a pytest -k expression."),
     ]
-
-    sizes = ('small', 'medium', 'large', 'all')
-    types = ('unit', 'integration', 'e2e')
 
     def get_args(self):
         """Return args to be used in test command."""
-        return '--size %s --type %s' % (self.size, self.type)
+        if self.k:
+            return f"-k '{self.k}'"
+        return ""
 
     def initialize_options(self):
         """Set default size and type args."""
-        self.size = 'all'
-        self.type = 'unit'
+        self.k = ""
 
     def finalize_options(self):
         """Post-process."""
+        pass
+
+
+class Test(TestCommand):
+    """Run all tests."""
+
+    description = "run tests and display results"
+
+    def run(self):
+        """Run tests."""
+        cmd = f"python3 -m pytest tests/ {self.get_args()}"
         try:
-            assert self.size in self.sizes, ('ERROR: Invalid size:'
-                                             f':{self.size}')
-            assert self.type in self.types, ('ERROR: Invalid type:'
-                                             f':{self.type}')
-        except AssertionError as exc:
+            check_call(cmd, shell=True)
+        except CalledProcessError as exc:
             print(exc)
+            print("Unit tests failed. Fix the errors above and try again.")
             sys.exit(-1)
 
 
 class Cleaner(SimpleCommand):
     """Custom clean command to tidy up the project root."""
 
-    description = 'clean build, dist, pyc and egg from package and docs'
+    description = "clean build, dist, pyc and egg from package and docs"
 
     def run(self):
         """Clean build, dist, pyc and egg from package and docs."""
-        call('rm -vrf ./build ./dist ./*.egg-info', shell=True)
-        call('find . -name __pycache__ -type d | xargs rm -rf', shell=True)
-        call('make -C docs/ clean', shell=True)
-
-
-class Test(TestCommand):
-    """Run all tests."""
-
-    description = 'run tests and display results'
-
-    def get_args(self):
-        """Return args to be used in test command."""
-        markers = self.size
-        if markers == "small":
-            markers = 'not medium and not large'
-        size_args = "" if self.size == "all" else "-m '%s'" % markers
-        return '--addopts="tests/%s %s"' % (self.type, size_args)
-
-    def run(self):
-        """Run tests."""
-        cmd = 'python setup.py pytest %s' % self.get_args()
-        try:
-            check_call(cmd, shell=True)
-        except CalledProcessError as exc:
-            print(exc)
+        call("rm -vrf ./build ./dist ./*.egg-info", shell=True)
+        call("find . -name __pycache__ -type d | xargs rm -rf", shell=True)
+        call("make -C docs/ clean", shell=True)
 
 
 class TestCoverage(Test):
     """Display test coverage."""
 
-    description = 'run tests and display code coverage'
+    description = "run unit tests and display code coverage"
 
     def run(self):
-        """Run tests quietly and display coverage report."""
+        """Run unittest quietly and display coverage report."""
         cmd = f"python3 -m pytest --cov=. tests/ {self.get_args()}"
         call(cmd, shell=True)
 
@@ -137,7 +120,7 @@ class TestCoverage(Test):
 class Linter(SimpleCommand):
     """Code linters."""
 
-    description = 'lint Python source code'
+    description = "lint Python source code"
 
     def run(self):
         """Run yala."""
@@ -195,7 +178,7 @@ class DevelopMode(develop):
     created on the system aiming the current source code.
     """
 
-    description = 'Install NApps in development mode'
+    description = "Install NApps in development mode"
 
     def run(self):
         """Install the package in a developer mode."""
@@ -204,7 +187,7 @@ class DevelopMode(develop):
             shutil.rmtree(str(ENABLED_PATH), ignore_errors=True)
         else:
             self._create_folder_symlinks()
-            #self._create_file_symlinks()
+            # self._create_file_symlinks()
             KytosInstall.enable_core_napps()
 
     @staticmethod
@@ -245,43 +228,51 @@ def symlink_if_different(path, target):
         path.symlink_to(target)
 
 
+def read_version_from_json():
+    """Read the NApp version from NApp kytos.json file."""
+    file = Path("kytos.json")
+    metadata = json.loads(file.read_text(encoding="utf8"))
+    return metadata["version"]
+
+
 def read_requirements(path="requirements/run.txt"):
     """Read requirements file and return a list."""
     with open(path, "r", encoding="utf8") as file:
         return [line.strip() for line in file.readlines() if not line.startswith("#")]
 
 
-setup(name=f'{NAPP_USERNAME}_{NAPP_NAME}',
-      version=NAPP_VERSION,
-      description='HackInSDN Containment Kytos Napp',
-      url=f'http://github.com/hackinsdn/containment',
-      author='HackInSDN team',
-      author_email='hackinsdn@ufba.br',
-      license='MIT',
-      install_requires=read_requirements(),
-      setup_requires=['pytest-runner'],
-      tests_require=['pytest'],
-      extras_require={
-          "dev": [
-              "pytest==7.0.0",
-              "pytest-cov==3.0.0",
-              "pip-tools",
-              "yala",
-              "tox",
-          ],
-      },
-      cmdclass={
-          'clean': Cleaner,
-          'coverage': TestCoverage,
-          'develop': DevelopMode,
-          'install': InstallMode,
-          'lint': Linter,
-          'test': Test,
-      },
-      zip_safe=False,
-      classifiers=[
-          'License :: OSI Approved :: MIT License',
-          'Operating System :: POSIX :: Linux',
-          'Programming Language :: Python :: 3.6',
-          'Topic :: System :: Networking',
-      ])
+setup(
+    name=f'{NAPP_USERNAME}_{NAPP_NAME}',
+    version=read_version_from_json(),
+    description='HackInSDN Containment Kytos Napp',
+    url=f'http://github.com/hackinsdn/containment',
+    author='HackInSDN team',
+    author_email='hackinsdn@ufba.br',
+    license="MIT",
+    install_requires=read_requirements(),
+    packages=[],
+    extras_require={
+        "dev": [
+            "pytest==7.0.0",
+            "pytest-cov==3.0.0",
+            "pip-tools",
+            "yala",
+            "tox",
+        ],
+    },
+    cmdclass={
+        "clean": Cleaner,
+        "coverage": TestCoverage,
+        "develop": DevelopMode,
+        "install": InstallMode,
+        "lint": Linter,
+        "test": Test,
+    },
+    zip_safe=False,
+    classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3",
+        "Topic :: System :: Networking",
+    ],
+)
