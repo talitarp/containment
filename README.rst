@@ -34,6 +34,10 @@ To install this NApp, first, make sure to have the same venv activated as you ha
    $ cd containment
    $ python3 setup.py develop
 
+Other possible ways of installing this Napp would be:
+- Using pip with github repo URL (you may want to change the branch from main to something else): `python3 -m pip install -e git+http://github.com/hackinsdn/containment@main#egg=hackinsdn-containment`
+- Using pip with local repo copy: `git clone http://github.com/hackinsdn/containment && cd containment && python3 -m pip install -e .`
+
 The easiest way of using this Napp is through the Docker container:
 
 .. code:: shell
