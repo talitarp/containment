@@ -59,11 +59,36 @@ General Information
 
 The Containment Napp supports TODO, TODO
 
-To create a containment XYZ (TODO add more), one would have to run the following command:
+- To create a containment to block traffic from IPv4 10.1.98.100 on VLAN 198 at the switch 00:00:00:00:00:00:00:01 port 1, one would have to run the following command:
 
 .. code-block:: shell
 
-  curl -s -X POST -H 'Content-type: application/json' http://127.0.0.1:8181/api/hackinsdn/containment/v1/ -d '{"TODO": "TODO"}'
+	# curl -s -X POST -H 'Content-type: application/json' http://127.0.0.1:8181/api/hackinsdn/containment/v1/ -d '{"switch": "00:00:00:00:00:00:00:01", "interface": 1, "match": {"vlan": 198, "ipv4_src": "10.1.98.100"}}'
+	{"containment_id": "ad80c44576c84d"}
+
+- To list existing containments, one would have to run the following command:
+
+.. code-block:: shell
+
+ 	# curl -s http://127.0.0.1:8181/api/hackinsdn/containment/v1/
+	{
+	  "blocks": {
+	    "6ca46d899ff14f": {
+	      "switch": "00:00:00:00:00:00:00:01",
+	      "interface": 1,
+	      "match": {
+	        "vlan": 198,
+	        "ipv4_src": "10.1.98.100"
+	      }
+	    }
+	  }
+	}
+
+- To delete a containment:
+
+.. code-block:: shell
+
+ 	# curl -s -X DELETE http://127.0.0.1:8181/api/hackinsdn/containment/v1/6ca46d899ff14f
 
 
 

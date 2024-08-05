@@ -392,8 +392,7 @@ class Main(KytosNApp):
             # "set_ipv4_dst", "set_ipv6_dst", "set_tcp_dst", "set_udp_dst", "set_mac_dst"
 
         if type == "DELETE":
-            if "redirect_to" not in data:  # It's a block contention.
-                block_id = data.get("block_id")
+            if "redirect_to" not in self.stored_blocks["blocks"][block_id]:  # It's a block contention.
                 payload = {
                     "flows": [
                         {
@@ -412,8 +411,7 @@ class Main(KytosNApp):
                         }
                     ]
                 }
-            if "redirect_to" in data:  # It's a redirect contention.
-                block_id = data.get("block_id")
+            if "redirect_to" in self.stored_blocks["blocks"][block_id]:  # It's a redirect contention.
                 redirect_to = self.stored_blocks["blocks"][block_id]["redirect_to"][
                     "outport"
                 ]
@@ -468,8 +466,7 @@ class Main(KytosNApp):
         self.list_blocks.append(linha)
         return True, "success"
 
-    def remove_rule(self, data, payload, dpid):
-        block_id = data["block_id"]
+    def remove_rule(self, block_id, payload, dpid):
         if block_id in self.stored_blocks["blocks"]:
             response = requests.delete(
                 f"http://127.0.0.1:8181/api/kytos/flow_manager/v2/flows/{dpid}",
@@ -490,7 +487,7 @@ class Main(KytosNApp):
 
         return True, "success"
 
-    @rest("/v1/contention", methods=["POST"])
+    @rest("/v1/", methods=["POST"])
     def contention_post(self, request: Request) -> JSONResponse:
         type = "POST"
         data = get_json_or_400(request, self.controller.loop)  # access user request
@@ -509,9 +506,7 @@ class Main(KytosNApp):
             block_id = data["block_id"]
 
         if block_id in self.stored_blocks["blocks"]:  # NAO PRECISA MAIS.
-            return JSONResponse(
-                {"result": "Index ID already exists. Contentation doesn't created"}
-            )
+            raise HTTPException(400, "Fail to create containment: ID already exists.")
         else:
             # linha = str(data["switch"]) + str(data.get("interface")) + str(data.get("match")) + str(data.get("redirect_to"))
             linha = (
@@ -524,45 +519,33 @@ class Main(KytosNApp):
                     data, payload, dpid, block_id, linha
                 ):  # Rule is inserted (add_rule)
                     log.info(f"Update contention list ADD={data}")
-                    return JSONResponse(
-                        f"result: Contentation created successfully ID {block_id}"
-                    )
+                    return JSONResponse({"containment_id": block_id})
             else:
-                return JSONResponse(
-                    {
-                        "result": "RULE already exists in the list. Contentation doesn't created"
-                    }
-                )
+                raise HTTPException(400, "Fail to create containment: RULE already exists in the list.")
 
-    @rest("/v1/contention", methods=["DELETE"])
+    @rest("/v1/{containment_id}", methods=["DELETE"])
     def contention_remove(self, request: Request) -> JSONResponse:
-        type = "DELETE"
-        data = get_json_or_400(request, self.controller.loop)  # access user request
-        result, msg = self.validate_input(data, type)
-        if not result:
-            raise HTTPException(400, f"Invalid request data: {msg}")
-        log.info(f"DELETE contention called with data={data}")
+        """Remove a containment."""
+        containment_id = request.path_params["containment_id"]
+        if containment_id not in self.stored_blocks["blocks"]:
+            log.info(f"Invalid DELETE containment {containment_id}")
+            raise HTTPException(404, f"Invalid containment ID (not found)")
 
-        block_id = data["block_id"]
-        dpid = self.stored_blocks["blocks"][block_id]["switch"]
-        payload = self.get_payload(data, block_id, type)
+        log.info(f"DELETE containment {containment_id}")
 
-        if self.remove_rule(data, payload, dpid):
-            log.info(f"Update contention list DELETE={data}")
-            return JSONResponse(
-                f"result: Contention deleted successfully ID {block_id}"
-            )
+        dpid = self.stored_blocks["blocks"][containment_id]["switch"]
+        payload = self.get_payload({}, containment_id, "DELETE")
+
+        if self.remove_rule(containment_id, payload, dpid):
+            log.info(f"Containment DELETE successfully {containment_id}")
+            return JSONResponse("Containment deleted successfully")
         else:
-            return JSONResponse(
-                {
-                    "result": "RULE doesn't deleted because not exist or some problem occurred"
-                }
-            )
+            raise HTTPException(400, "Fail to delete containment, check logs.")
 
-    @rest("/v1/contention", methods=["GET"])
+    @rest("/v1/", methods=["GET"])
     def list_contention(self, request: Request) -> JSONResponse:
         """List contentions performed so far."""
-        return JSONResponse({"result": self.stored_blocks})
+        return JSONResponse(self.stored_blocks)
 
         # 1. descrever a API REST
         # quais argumentos vamos aceitar?
