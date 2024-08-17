@@ -158,7 +158,7 @@ class Main(KytosNApp):
                 "set_ipv6_dst",
                 "set_tcp_dst",
                 "set_udp_dst",
-                "set_mac_dst",
+                "set_eth_dst",
             ]
 
             if "set" in data:
@@ -334,7 +334,7 @@ class Main(KytosNApp):
                                 }
                             ]
                         }
-                    if "set_mac_dst" in set:
+                    if "set_eth_dst" in set:
                         # action_type: set_mac_dst, mac_dst= mac_dst que o usuário pediu
                         mac_dst = data["set"]["set_mac_dst"]
                         payload = {
